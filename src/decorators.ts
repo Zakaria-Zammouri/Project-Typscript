@@ -1,4 +1,7 @@
-
+/**
+ * Legacy TypeScript method decorator.
+ * Enable "experimentalDecorators": true in tsconfig.json.
+ */
 export function Log(
   target: object,
   propertyKey: string | symbol,
@@ -16,9 +19,7 @@ export function Log(
 
     try {
       const result = originalMethod.apply(this, args);
-
       console.log(`[RETURN] ${String(propertyKey)}`, result);
-
       return result;
     } catch (error: unknown) {
       console.error(`[ERROR] ${String(propertyKey)}`, error);
@@ -52,73 +53,65 @@ export function MeasureTime(
   };
 }
 
+/**
+ * Exercise 4: rejects a spell whose power is negative.
+ * The decorated method must receive the spell as its first argument.
+ */
 export function ValidateSpellPower(
   target: object,
   propertyKey: string | symbol,
   descriptor: PropertyDescriptor
 ): void {
   const originalMethod = descriptor.value as (
-    this: unknown,
     ...args: unknown[]
   ) => unknown;
 
-  descriptor.value = function (
-    this: unknown,
-    ...args: unknown[]
-  ): unknown {
-    const spell = args[0] as
-      { power?: unknown } | undefined;
+  descriptor.value = function (this: unknown, ...args: unknown[]): unknown {
+    const candidate: unknown = args[0];
 
     if (
-      spell &&
-      typeof spell === "object" &&
-      typeof spell.power === "number" &&
-      spell.power < 0
+      typeof candidate === "object" &&
+      candidate !== null &&
+      "power" in candidate &&
+      typeof candidate.power === "number" &&
+      candidate.power < 0
     ) {
-      throw new Error("Spell power cannot be negative.");
+      throw new Error("Spell power cannot be negative");
     }
 
     return originalMethod.apply(this, args);
   };
 }
 
+/**
+ * Exercise 5: caches the results of a synchronous method.
+ * Each object instance has its own cache (WeakMap -> Map).
+ */
 export function Cache(
   target: object,
   propertyKey: string | symbol,
   descriptor: PropertyDescriptor
 ): void {
-  const originalMethod = descriptor.value as (
-    ...args: unknown[]
-  ) => unknown;
+  const originalMethod = descriptor.value as (...args: unknown[]) => unknown;
 
-  const instanceCaches =
-    new WeakMap<object, Map<string, unknown>>();
+  const instanceCaches = new WeakMap<object, Map<string, unknown>>();
 
-  descriptor.value = function (
-    this: object,
-    ...args: unknown[]
-  ): unknown {
+  descriptor.value = function (this: object, ...args: unknown[]): unknown {
     let cache = instanceCaches.get(this);
-
     if (!cache) {
       cache = new Map<string, unknown>();
       instanceCaches.set(this, cache);
     }
 
     const key = JSON.stringify(args);
-
     if (cache.has(key)) {
-      console.log(
-        `[CACHE HIT] ${String(propertyKey)}(${key})`
-      );
-
+      console.log(`[CACHE HIT] ${String(propertyKey)}`);
       return cache.get(key);
     }
 
+    console.log(`[CACHE MISS] ${String(propertyKey)}`);
     const result = originalMethod.apply(this, args);
-
     cache.set(key, result);
-
     return result;
   };
 }

@@ -1,19 +1,8 @@
-
-import type {
-  Wizard,
-  Spell,
-  House,
-  NewWizard
-} from "./types";
-
-import {
-  Log,
-  MeasureTime,
-  ValidateSpellPower
-} from "./decorators";
+import type { Wizard, Spell, NewWizard } from "./types";
+import { Log, MeasureTime, ValidateSpellPower } from "./decorators";
 
 export class Repository<T extends { id: number }> {
-  protected items: T[] = [];
+  private items: T[] = [];
 
   @Log
   add(item: T): void {
@@ -22,7 +11,7 @@ export class Repository<T extends { id: number }> {
 
   @MeasureTime
   findById(id: number): T | undefined {
-    return this.items.find((item) => item.id === id);
+    return this.items.find(item => item.id === id);
   }
 
   getAll(): T[] {
@@ -32,9 +21,7 @@ export class Repository<T extends { id: number }> {
   update(id: number, changes: Partial<T>): boolean {
     const item = this.findById(id);
 
-    if (!item) {
-      return false;
-    }
+    if (!item) return false;
 
     Object.assign(item, changes);
     return true;
@@ -42,31 +29,22 @@ export class Repository<T extends { id: number }> {
 }
 
 export class WizardRepository extends Repository<Wizard> {
+  // Exercise 1: the caller gives a NewWizard (no id), the repository assigns the id.
   addWizard(newWizard: NewWizard): Wizard {
-    const nextId =
-      this.items.reduce(
-        (maxId, wizard) => Math.max(maxId, wizard.id),
-        0
-      ) + 1;
-
-    const wizard: Wizard = {
-      ...newWizard,
-      id: nextId
-    };
-
+    const nextId = Math.max(0, ...this.getAll().map(w => w.id)) + 1;
+    const wizard = { ...newWizard, id: nextId } as Wizard;
     this.add(wizard);
-
     return wizard;
   }
 
-  findByHouse(house: House): Wizard[] {
-    return this.items.filter(
-      (wizard) => wizard.house === house
-    );
+  // Exercise 2: filter wizards by house (indexed access type).
+  findByHouse(house: Wizard["house"]): Wizard[] {
+    return this.getAll().filter(wizard => wizard.house === house);
   }
 }
 
 export class SpellRepository extends Repository<Spell> {
+  // Exercise 4: reject spells with a negative power.
   @ValidateSpellPower
   override add(spell: Spell): void {
     super.add(spell);
